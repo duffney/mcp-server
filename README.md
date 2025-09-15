@@ -32,7 +32,9 @@ To use copacetic-mcp with VSCode and MCP-compatible tools, add the following con
 
 Replace `/path/to/copacetic-mcp-server` with the actual path to your copacetic-mcp server binary. You can download the latest release from the [Releases]() page.
 
-### Docker option (run server from a container)
+> **Note**: When using the binary directly, ensure that the Copacetic CLI, Trivy, and Docker are installed and available in your system PATH.
+
+### Docker Container option
 
 ```jsonc
 "copacetic-mcp-docker": {
@@ -57,6 +59,8 @@ Notes:
 
 - Mounting the Docker socket gives the container access to the host Docker daemon; this is required for Copacetic image operations but has security implications—only run trusted images.
 - Mounting `${HOME}/.docker/config.json` allows the container to use your registry credentials for pulling/pushing images.
+
+<!-- TODO: Docker Gateway / Catalog  -->
 
 #### Alternative: Using with Claude Desktop
 
