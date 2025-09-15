@@ -1,0 +1,30 @@
+{
+  "servers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": ["mcp", "gateway", "run", "--long-lived"],
+      "type": "stdio"
+    },
+    "copacetic-mcp-server": {
+      "command": "${env:HOME}/pathToCopaceticMCPBinary",
+      "args": [],
+      "type": "stdio"
+    },
+    "copacetic-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--mount",
+        "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+        "--mount",
+        "type=bind,source=${env:HOME}/.docker/config.json,target=/root/.docker/config.json",
+        "ghcr.io/duffney/copacetic-mcp:latest"
+      ],
+      "env": {
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
+      }
+    }
+  }
+}
