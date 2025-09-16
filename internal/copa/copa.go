@@ -11,7 +11,6 @@ import (
 
 	"github.com/duffney/copacetic-mcp/internal/docker"
 	"github.com/duffney/copacetic-mcp/internal/types"
-	multiplatform "github.com/duffney/copacetic-mcp/internal/util"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -80,7 +79,7 @@ func Run(ctx context.Context, cc *mcp.ServerSession, params types.PatchParams, r
 
 		patchedImage = []string{} // Clear the default patchedImage
 		for _, p := range params.Platform {
-			arch := multiplatform.PlatformToArch(p)
+			arch := PlatformToArch(p)
 			patchedImage = append(patchedImage, fmt.Sprintf("%s:%s-%s", repository, params.Tag, arch))
 		}
 	}

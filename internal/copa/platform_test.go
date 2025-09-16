@@ -1,4 +1,4 @@
-package multiplatform
+package copa
 
 import (
 	"context"

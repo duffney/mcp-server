@@ -13,7 +13,6 @@ import (
 	"github.com/duffney/copacetic-mcp/internal/copa"
 	"github.com/duffney/copacetic-mcp/internal/trivy"
 	"github.com/duffney/copacetic-mcp/internal/types"
-	multiplatform "github.com/duffney/copacetic-mcp/internal/util"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -42,19 +41,11 @@ func NewServer(version string) *mcp.Server {
 		Description: "Get guidance on which Copacetic tools to use for different container patching scenarios",
 	}, WorkflowGuide)
 
-	// Vulnerability scanning tool
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "scan-container",
 		Description: "Scan container image for vulnerabilities using Trivy - creates vulnerability reports required for report-based patching",
 	}, ScanContainer)
 
-	// Legacy patch tool for backward compatibility
-	// mcp.AddTool(server, &mcp.Tool{
-	// Name:        "patch",
-	// Description: "Patch container image with copacetic (legacy - use specific patching tools instead)",
-	// }, Patch)
-
-	// New focused patching tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "patch-vulnerabilities",
 		Description: "Patch container image vulnerabilities using a pre-generated vulnerability report from 'scan-container' tool - requires running 'scan-container' first. This is the RECOMMENDED approach for vulnerability-based patching.",
@@ -137,26 +128,6 @@ func ScanContainer(ctx context.Context, req *mcp.CallToolRequest, args types.Sca
 	}, nil, nil
 }
 
-// // TODO: feat: make images []string and loop through for patching in parallel
-// func Patch(ctx context.Context, cc *mcp.ServerSession, params *mcp.CallToolParamsFor[types.PatchParams]) (*mcp.CallToolResultFor[any], error) {
-// 	// Input validation
-// 	if params.Arguments.Image == "" {
-// 		return &mcp.CallToolResultFor[any]{
-// 			Content: []mcp.Content{&mcp.TextContent{Text: "image parameter is required"}},
-// 		}, fmt.Errorf("image parameter is required")
-// 	}
-//
-// 	// Determine execution mode
-// 	mode := types.DetermineExecutionMode(params.Arguments)
-// 	cc.Log(ctx, &mcp.LoggingMessageParams{
-// 		Data:   fmt.Sprintf("Using execution mode: %s", mode),
-// 		Level:  "debug",
-// 		Logger: "copapatch",
-// 	})
-//
-// 	return patchImage(ctx, cc, params.Arguments, mode)
-// }
-
 // PatchVulnerabilities performs report-based patching using an existing vulnerability report
 // NOTE: This tool requires that 'scan-container' has been run first to generate the vulnerability report
 func PatchVulnerabilities(ctx context.Context, req *mcp.CallToolRequest, args types.ReportBasedPatchParams) (*mcp.CallToolResult, any, error) {
@@ -220,97 +191,6 @@ func PatchComprehensive(ctx context.Context, req *mcp.CallToolRequest, args type
 	return result, nil, err
 }
 
-func patchImage(ctx context.Context, cc *mcp.ServerSession, params types.PatchParams, mode types.ExecutionMode) (*mcp.CallToolResult, error) {
-	var reportPath, vexPath string
-	var patchedImage []string
-	var numFixedVulns, updatedPackageCount int
-	var err error
-
-	switch mode {
-	case types.ModeComprehensive:
-		imageDetails, err := multiplatform.GetImageInfo(ctx, params.Image)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// since the image is local and no platforms were specified, patch and create an image for each of the supported platforms
-		if imageDetails.IsLocal && imageDetails.IsMultiPlatform && len(params.Platform) == 0 {
-			supportedPlatforms := strings.Join(multiplatform.GetAllSupportedPlatforms(), ", ")
-			cc.Log(ctx, &mcp.LoggingMessageParams{
-				Data:   fmt.Sprintf("Local multiplatform image detected (%s). Copa will patch all %d supported platforms: %s", params.Image, len(multiplatform.GetAllSupportedPlatforms()), supportedPlatforms),
-				Level:  "info",
-				Logger: "copapatch",
-			})
-		}
-
-		// TODO: update msg to compare existing platforms vs supported
-		// Use the registry image index to get the platforms, then patch and create an image for each supported platform
-		if !imageDetails.IsLocal && imageDetails.IsMultiPlatform && len(params.Platform) == 0 {
-			platformsToPatch := multiplatform.FilterSupportedPlatforms(imageDetails.Platform)
-			supportedPlatforms := strings.Join(platformsToPatch, ", ")
-			cc.Log(ctx, &mcp.LoggingMessageParams{
-				Data:   fmt.Sprintf("Remote multiplatform image detected (%s). Copa will patch %d supported platforms: %s", params.Image, len(platformsToPatch), supportedPlatforms),
-				Level:  "info",
-				Logger: "copapatch",
-			})
-		}
-
-		if len(params.Platform) > 0 {
-			supportedPlatforms := multiplatform.FilterSupportedPlatforms(params.Platform)
-			cc.Log(ctx, &mcp.LoggingMessageParams{
-				Data:   fmt.Sprintf("patching platforms: %s", supportedPlatforms),
-				Level:  "info",
-				Logger: "copapatch",
-			})
-		}
-
-		_, patchedImage, err = copa.Run(ctx, cc, params, reportPath)
-		if err != nil {
-			log.Fatalf("copa patch all failed: %v", err)
-		}
-
-	case types.ModeReportBased:
-		// Scan using the host platform
-		reportPath, err = trivy.Run(ctx, cc, params.Image, params.Platform)
-		if err != nil {
-			return nil, fmt.Errorf("trivy failed: %w", err)
-		}
-
-		vexPath, patchedImage, err = copa.Run(ctx, cc, params, reportPath)
-		if err != nil {
-			return nil, fmt.Errorf("copa failed: %w", err)
-		}
-
-		numFixedVulns, updatedPackageCount, err = parseVexDoc(vexPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse vex document: %w", err)
-		}
-
-		if err := os.RemoveAll(vexPath); err != nil {
-			return nil, fmt.Errorf("warning: failed to delete vex file %s: %v", vexPath, err)
-		}
-		if err := os.RemoveAll(reportPath); err != nil {
-			return nil, fmt.Errorf("warning: failed to delete report file %s: %v", reportPath, err)
-		}
-	}
-
-	result := buildPatchResult(
-		params.Image,
-		reportPath,
-		vexPath,
-		patchedImage,
-		numFixedVulns,
-		updatedPackageCount,
-		params.Scan,
-	)
-
-	successMsg := formatPatchSuccess(result)
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: successMsg}},
-	}, nil
-}
-
 // patchImageReportBased handles report-based patching using an existing vulnerability report
 func patchImageReportBased(ctx context.Context, cc *mcp.ServerSession, params types.ReportBasedPatchParams) (*mcp.CallToolResult, error) {
 	// Use the provided report path instead of scanning
@@ -363,7 +243,7 @@ func patchImageReportBased(ctx context.Context, cc *mcp.ServerSession, params ty
 
 // patchImagePlatformSelective handles platform-selective patching
 func patchImagePlatformSelective(ctx context.Context, cc *mcp.ServerSession, params types.PlatformSelectivePatchParams) (*mcp.CallToolResult, error) {
-	supportedPlatforms := multiplatform.FilterSupportedPlatforms(params.Platform)
+	supportedPlatforms := copa.FilterSupportedPlatforms(params.Platform)
 	cc.Log(ctx, &mcp.LoggingMessageParams{
 		Data:   fmt.Sprintf("Patching platforms: %s", strings.Join(supportedPlatforms, ", ")),
 		Level:  "info",
@@ -394,7 +274,7 @@ func patchImagePlatformSelective(ctx context.Context, cc *mcp.ServerSession, par
 
 // patchImageComprehensive handles comprehensive patching of all platforms
 func patchImageComprehensive(ctx context.Context, cc *mcp.ServerSession, params types.ComprehensivePatchParams) (*mcp.CallToolResult, error) {
-	imageDetails, err := multiplatform.GetImageInfo(ctx, params.Image)
+	imageDetails, err := copa.GetImageInfo(ctx, params.Image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image info: %w", err)
 	}
@@ -404,9 +284,9 @@ func patchImageComprehensive(ctx context.Context, cc *mcp.ServerSession, params 
 
 	// Determine what platforms will be patched and what images will be created
 	if imageDetails.IsLocal && imageDetails.IsMultiPlatform {
-		expectedPlatforms = multiplatform.GetAllSupportedPlatforms()
+		expectedPlatforms = copa.GetAllSupportedPlatforms()
 	} else if !imageDetails.IsLocal && imageDetails.IsMultiPlatform {
-		expectedPlatforms = multiplatform.FilterSupportedPlatforms(imageDetails.Platform)
+		expectedPlatforms = copa.FilterSupportedPlatforms(imageDetails.Platform)
 	} else {
 		// Single platform image - use current platform
 		expectedPlatforms = imageDetails.Platform
@@ -442,7 +322,7 @@ func patchImageComprehensive(ctx context.Context, cc *mcp.ServerSession, params 
 		// Multiplatform: each platform gets architecture suffix
 		for _, platform := range expectedPlatforms {
 			// [duffney/multiplat:-amd64
-			arch := multiplatform.PlatformToArch(platform)
+			arch := copa.PlatformToArch(platform)
 			if params.Tag == "" {
 				expectedImages = append(expectedImages, fmt.Sprintf("%s:%s-%s", repository, "patched", arch))
 			} else {

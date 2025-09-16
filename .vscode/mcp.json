@@ -1,4 +1,12 @@
 {
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "token",
+      "description": "",
+      "password": true
+    }
+  ],
   "servers": {
     "MCP_DOCKER": {
       "command": "docker",
@@ -10,7 +18,7 @@
       "args": [],
       "type": "stdio"
     },
-    "copacetic-docker": {
+    "copacetic-docker-in-docker": {
       "command": "docker",
       "args": [
         "run",
@@ -24,6 +32,14 @@
       ],
       "env": {
         "DOCKER_HOST": "unix:///var/run/docker.sock"
+      }
+    },
+    "copacetic-docker-reg-auth": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "ghcr.io/duffney/copacetic-mcp:latest"],
+      "env": {
+        "REGISTRY_TOKEN": "${input:token}",
+        "REGISTRY_HOST": "nameOfRegistry"
       }
     }
   }
