@@ -1,4 +1,5 @@
 // Package multiplatform provides utilities to detect if Docker images support multiple platforms.
+// TODO: refactor to internal/copa/platform.go
 package multiplatform
 
 import (

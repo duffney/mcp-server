@@ -1,3 +1,4 @@
+// TODO: rename to copamcp
 package mcp
 
 import (

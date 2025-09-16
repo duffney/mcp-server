@@ -61,7 +61,7 @@ func initMCPClient() error {
 	)
 
 	// cmd := exec.Command(path.Join(os.Getenv("HOME"), "github/copacetic-mcp/bin/copacetic-mcp-server"))
-	cmd := exec.Command("copacetic-mcp-server")
+	cmd := exec.Command("./copacetic-mcp-server")
 	// Capture server's stderr for logging
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {

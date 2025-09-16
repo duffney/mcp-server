@@ -1,0 +1,63 @@
+package docker
+
+import (
+	"fmt"
+	"github.com/duffney/copacetic-mcp/internal/types"
+	"os"
+	"os/exec"
+	"strings"
+)
+
+// LoginWithToken authenticates to a registry using a token via docker login
+func LoginWithToken(registry, token string, config *types.PatchParams) error {
+	if token == "" {
+		return fmt.Errorf("token cannot be empty")
+	}
+
+	// Default to Docker Hub if no registry specified
+	if registry == "" {
+		registry = "docker.io"
+	}
+
+	// Use docker login with --password-stdin for security
+	cmd := exec.Command("docker", "login", registry, "-u", "_token", "--password-stdin")
+	cmd.Stdin = strings.NewReader(token)
+
+	// Capture both stdout and stderr for better error reporting
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("docker login failed: %v\nOutput: %s", err, string(output))
+	}
+
+	config.Push = true
+
+	return nil
+}
+
+// SetupRegistryAuthFromEnv reads registry token from environment and runs docker login
+// Environment variables:
+// - REGISTRY_TOKEN: The authentication token
+// - REGISTRY_HOST: The registry hostname (optional, defaults to docker.io)
+func SetupRegistryAuthFromEnv(config *types.PatchParams) error {
+	token := os.Getenv("REGISTRY_TOKEN")
+	if token == "" {
+		// Not an error - just means no token authentication requested
+		return nil
+	}
+
+	registry := os.Getenv("REGISTRY_HOST")
+	// Leave empty to use Docker's default behavior
+
+	return LoginWithToken(registry, token, config)
+}
+
+// LoginMultipleRegistries handles multiple registry authentication
+// Useful for complex scenarios with multiple registries
+// func LoginMultipleRegistries(registryTokens map[string]string) error {
+// 	for registry, token := range registryTokens {
+// 		if err := LoginWithToken(registry, token); err != nil {
+// 			return fmt.Errorf("failed to login to %s: %w", registry, err)
+// 		}
+// 	}
+// 	return nil
+// }

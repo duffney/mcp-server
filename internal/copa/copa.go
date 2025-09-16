@@ -1,3 +1,4 @@
+// TODO: rename to copacli
 package copa
 
 import (
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/duffney/copacetic-mcp/internal/docker"
 	"github.com/duffney/copacetic-mcp/internal/types"
 	multiplatform "github.com/duffney/copacetic-mcp/internal/util"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -31,7 +33,13 @@ func Run(ctx context.Context, cc *mcp.ServerSession, params types.PatchParams, r
 		tag = tagged.TagStr()
 		repository = tagged.RepositoryStr()
 		repository = strings.TrimPrefix(repository, "library/")
+	}
 
+	if token := os.Getenv("REGISTRY_TOKEN"); token != "" {
+		err = docker.SetupRegistryAuthFromEnv(&params)
+		if err != nil {
+			return "", []string{}, fmt.Errorf("failed to autenticate to registry %s: %w", "TODO", err)
+		}
 	}
 
 	copaArgs := []string{
