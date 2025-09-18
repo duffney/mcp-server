@@ -90,7 +90,7 @@ func WorkflowGuide(ctx context.Context, req *mcp.CallToolRequest, args map[strin
 }
 
 // ScanContainer performs vulnerability scanning on a container image using Trivy
-func ScanContainer(ctx context.Context, req *mcp.CallToolRequest, args types.ScanParams) (*mcp.CallToolResult, any, error) {
+func ScanContainer(ctx context.Context, req *mcp.CallToolRequest, args trivy.ScanParams) (*mcp.CallToolResult, any, error) {
 	// Input validation
 	if args.Image == "" {
 		return &mcp.CallToolResult{

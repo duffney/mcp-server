@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/duffney/copacetic-mcp/internal/types"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -83,7 +82,7 @@ func Run(ctx context.Context, cc *mcp.ServerSession, image string, platform []st
 }
 
 // Scan performs vulnerability scanning and returns detailed scan results
-func Scan(ctx context.Context, cc *mcp.ServerSession, params types.ScanParams) (*types.ScanResult, error) {
+func Scan(ctx context.Context, cc *mcp.ServerSession, params ScanParams) (*ScanResult, error) {
 	reportPath, err := Run(ctx, cc, params.Image, params.Platform)
 	if err != nil {
 		return nil, fmt.Errorf("vulnerability scan failed: %w", err)
@@ -105,7 +104,7 @@ func Scan(ctx context.Context, cc *mcp.ServerSession, params types.ScanParams) (
 		platforms = []string{"host platform"}
 	}
 
-	return &types.ScanResult{
+	return &ScanResult{
 		Image:         params.Image,
 		ReportPath:    reportPath,
 		VulnCount:     vulnCount,
