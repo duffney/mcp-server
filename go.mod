@@ -1,4 +1,4 @@
-module github.com/duffney/copacetic-mcp
+module github.com/project-copacetic/mcp-server
 
 go 1.24.6
 

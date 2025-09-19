@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/duffney/copacetic-mcp/internal/mcp"
+	"github.com/project-copacetic/mcp-server/internal/copamcp"
 )
 
 // Build information set by GoReleaser
@@ -15,7 +15,7 @@ var (
 )
 
 func main() {
-	if err := mcp.Run(context.Background(), version); err != nil {
+	if err := copamcp.Run(context.Background(), version); err != nil {
 		log.Fatal(err)
 	}
 }
