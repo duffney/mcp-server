@@ -47,14 +47,3 @@ func SetupRegistryAuthFromEnv() (bool, error) {
 
 	return LoginWithToken(registry, token)
 }
-
-// LoginMultipleRegistries handles multiple registry authentication
-// Useful for complex scenarios with multiple registries
-// func LoginMultipleRegistries(registryTokens map[string]string) error {
-// 	for registry, token := range registryTokens {
-// 		if err := LoginWithToken(registry, token); err != nil {
-// 			return fmt.Errorf("failed to login to %s: %w", registry, err)
-// 		}
-// 	}
-// 	return nil
-// }
