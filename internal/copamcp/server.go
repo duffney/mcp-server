@@ -1,13 +1,8 @@
-// TODO: rename to copamcp
 package copamcp
 
 import (
 	"context"
-	"encoding/json"
-	"os"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/openvex/go-vex/pkg/vex"
 )
 
 // NewServer creates and configures the MCP server with all tools
@@ -44,7 +39,7 @@ func NewServer(version string) *mcp.Server {
 	}, PatchComprehensive)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "patch-platforms-selective",
+		Name:        "patch-platform-selective",
 		Description: "Patch specific container image platforms with Copa - patches only the specified platforms WITHOUT vulnerability scanning. Use ONLY when you want to patch specific platforms regardless of vulnerabilities. For vulnerability-based patching, use 'scan-container' + 'patch-vulnerabilities'.",
 	}, PatchPlatformSelective)
 
@@ -81,28 +76,4 @@ Choose the right tool for your use case:
 
 IMPORTANT: Do NOT mix approaches. If you scan first, use patch-vulnerabilities.
 If you want platform-specific patching without scanning, use patch-platforms.`
-}
-
-// TODO: mv to copa pkg
-func parseVexDoc(path string) (numFixedVulns, updatedPackageCount int, err error) {
-	vexData, err := os.ReadFile(path)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	var doc vex.VEX
-
-	if err := json.Unmarshal(vexData, &doc); err != nil {
-		return 0, 0, err
-	}
-
-	for _, stmt := range doc.Statements {
-		if stmt.Status == vex.StatusFixed {
-			numFixedVulns++
-			for _, product := range stmt.Products {
-				updatedPackageCount += len(product.Subcomponents)
-			}
-		}
-	}
-	return numFixedVulns, updatedPackageCount, nil
 }

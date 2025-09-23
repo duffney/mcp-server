@@ -5,8 +5,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	// "os"
+	"os"
 	"os/exec"
+
 	// "path"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -60,8 +61,27 @@ func initMCPClient() error {
 		},
 	)
 
-	// cmd := exec.Command(path.Join(os.Getenv("HOME"), "github/copacetic-mcp/bin/copacetic-mcp-server"))
-	cmd := exec.Command("./copacetic-mcp-server")
+	// Try to find the server binary in common locations
+	serverPaths := []string{
+		"./bin/copacetic-mcp-server",
+		"../bin/copacetic-mcp-server",
+		"./copacetic-mcp-server",
+		"copacetic-mcp-server",
+	}
+
+	var serverPath string
+	for _, path := range serverPaths {
+		if _, err := os.Stat(path); err == nil {
+			serverPath = path
+			break
+		}
+	}
+
+	if serverPath == "" {
+		return fmt.Errorf("could not find copacetic-mcp-server binary in any of: %v", serverPaths)
+	}
+
+	cmd := exec.Command(serverPath)
 	// Capture server's stderr for logging
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
@@ -129,7 +149,7 @@ allowing you to patch container images, scan for vulnerabilities, and manage con
 		scanPlatforms []string
 	)
 	var scanCmd = &cobra.Command{
-		Use:   "scan",
+		Use:   "scan-container",
 		Short: "Scan container image for vulnerabilities",
 		Long:  "Scan a container image for vulnerabilities using Trivy",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -140,7 +160,7 @@ allowing you to patch container images, scan for vulnerabilities, and manage con
 				mcpArgs["platform"] = scanPlatforms
 			}
 			if err := executeMCPTool("scan-container", mcpArgs); err != nil {
-				log.Fatalf("Error executing scan command: %v", err)
+				log.Fatalf("Error executing scan-container command: %v", err)
 			}
 		},
 	}
@@ -193,7 +213,7 @@ allowing you to patch container images, scan for vulnerabilities, and manage con
 				"push":     platformsPush,
 				"platform": targetPlatforms,
 			}
-			if err := executeMCPTool("patch-platforms", mcpArgs); err != nil {
+			if err := executeMCPTool("patch-platform-selective", mcpArgs); err != nil {
 				log.Fatalf("Error executing patch-platforms command: %v", err)
 			}
 		},
@@ -224,7 +244,7 @@ allowing you to patch container images, scan for vulnerabilities, and manage con
 				"push":       vulnPush,
 				"reportPath": vulnReportPath,
 			}
-			if err := executeMCPTool("patch-vulnerabilities", mcpArgs); err != nil {
+			if err := executeMCPTool("patch-report-based", mcpArgs); err != nil {
 				log.Fatalf("Error executing patch-vulnerabilities command: %v", err)
 			}
 		},
@@ -236,36 +256,6 @@ allowing you to patch container images, scan for vulnerabilities, and manage con
 	patchVulnerabilitiesCmd.MarkFlagRequired("image")
 	patchVulnerabilitiesCmd.MarkFlagRequired("patchtag")
 	patchVulnerabilitiesCmd.MarkFlagRequired("report-path")
-
-	// Legacy Patch command
-	var (
-		legacyImage    string
-		legacyPatchTag string
-		legacyPush     bool
-		legacyScan     bool
-	)
-	var patchCmd = &cobra.Command{
-		Use:   "patch",
-		Short: "Legacy patch command",
-		Long:  "Legacy patch command for backward compatibility",
-		Run: func(cmd *cobra.Command, args []string) {
-			mcpArgs := map[string]any{
-				"image":    legacyImage,
-				"patchtag": legacyPatchTag,
-				"push":     legacyPush,
-				"scan":     legacyScan,
-			}
-			if err := executeMCPTool("patch", mcpArgs); err != nil {
-				log.Fatalf("Error executing patch command: %v", err)
-			}
-		},
-	}
-	patchCmd.Flags().StringVarP(&legacyImage, "image", "i", "", "Container image to patch (required)")
-	patchCmd.Flags().StringVarP(&legacyPatchTag, "patchtag", "t", "", "Tag for the patched image (required)")
-	patchCmd.Flags().BoolVarP(&legacyPush, "push", "", false, "Push patched image to registry")
-	patchCmd.Flags().BoolVarP(&legacyScan, "scan", "s", false, "Perform vulnerability scan before patching")
-	patchCmd.MarkFlagRequired("image")
-	patchCmd.MarkFlagRequired("patchtag")
 
 	// List tools command
 	var listCmd = &cobra.Command{
@@ -290,7 +280,6 @@ allowing you to patch container images, scan for vulnerabilities, and manage con
 	rootCmd.AddCommand(patchComprehensiveCmd)
 	rootCmd.AddCommand(patchPlatformsCmd)
 	rootCmd.AddCommand(patchVulnerabilitiesCmd)
-	rootCmd.AddCommand(patchCmd)
 	rootCmd.AddCommand(listCmd)
 
 	// Execute the root command

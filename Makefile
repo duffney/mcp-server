@@ -9,7 +9,7 @@ DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
 # Targets
-.PHONY: all build build-server build-client clean test fmt vet release-snapshot help
+.PHONY: all build build-server build-client clean test fmt vet release-snapshot integration-test integration-test-quick help
 
 all: build
 
@@ -30,6 +30,14 @@ clean: ## Clean build artifacts
 test: ## Run tests
 	@echo "Running tests..."
 	@go test -v ./...
+
+integration-test: build ## Run full integration tests using CLI
+	@echo "Running integration tests..."
+	@./.scripts/integration-test.sh
+
+integration-test-quick: build ## Run quick integration tests (version, list only)
+	@echo "Running quick integration tests..."
+	@./.scripts/integration-test.sh --quick
 
 fmt: ## Format Go code
 	@echo "Formatting code..."

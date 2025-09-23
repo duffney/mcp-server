@@ -22,7 +22,7 @@ const (
 // If you want to patch based on vulnerability scan results, use 'scan-container' followed by 'patch-vulnerabilities' instead
 func PatchComprehensive(ctx context.Context, req *mcp.CallToolRequest, params types.ComprehensivePatchParams) (*mcp.CallToolResult, any, error) {
 	copa := copa.New(params, dryRun)
-	err := copa.
+	_, err := copa.
 		Build().
 		Run(ctx)
 	if err != nil {
@@ -41,7 +41,7 @@ func PatchComprehensive(ctx context.Context, req *mcp.CallToolRequest, params ty
 func PatchPlatformSelective(ctx context.Context, req *mcp.CallToolRequest, params types.PlatformSelectivePatchParams) (*mcp.CallToolResult, any, error) {
 
 	copa := copa.New(params, dryRun)
-	err := copa.
+	_, err := copa.
 		BuildWithPlatforms().
 		Run(ctx)
 	if err != nil {
@@ -58,18 +58,14 @@ func PatchPlatformSelective(ctx context.Context, req *mcp.CallToolRequest, param
 // NOTE: This tool requires that 'scan-container' has been run first to generate the vulnerability report
 func PatchReportBased(ctx context.Context, req *mcp.CallToolRequest, params types.ReportBasedPatchParams) (*mcp.CallToolResult, any, error) {
 	copa := copa.New(params, dryRun)
-	vexPath, err := copa.
+	result, err := copa.
 		BuildWithReport().
-		RunOutputVex(ctx)
+		Run(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("patching failed: %w", err)
 	}
-	numFixedVulns, updatedPackageCount, err := parseVexDoc(vexPath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse vex document: %w", err)
-	}
 
-	successMsg := fmt.Sprintf("successful patched: %s\n vulnerabilities fixed: %d packages updated: %d", params.Image, numFixedVulns, updatedPackageCount)
+	successMsg := fmt.Sprintf("successful patched: %s\n vulnerabilities fixed: %d packages updated: %d", params.Image, result.FixedVulnerabilityCount, result.UpdatedPackageCount)
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: successMsg}},
 	}, nil, nil
@@ -114,7 +110,7 @@ func ScanContainer(ctx context.Context, req *mcp.CallToolRequest, args trivy.Sca
 	}, nil, nil
 }
 
-func Version(ctx context.Context, req *mcp.CallToolRequest, args types.Ver) (*mcp.CallToolResult, any, error) {
+func Version(ctx context.Context, req *mcp.CallToolRequest, args map[string]interface{}) (*mcp.CallToolResult, any, error) {
 	cmd := exec.Command("copa", "--version")
 	output, err := cmd.Output()
 	if err != nil {
