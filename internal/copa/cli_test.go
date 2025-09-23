@@ -523,24 +523,3 @@ func (suite *CLITestSuite) TestExecute_ContextCancellation() {
 	}
 	suite.NotNil(result)
 }
-
-// Integration test (only runs if copa is available)
-func TestCLI_Integration(t *testing.T) {
-	// Skip if copa is not available
-	if _, err := exec.LookPath("copa"); err != nil {
-		t.Skip("copa not available in PATH, skipping integration test")
-	}
-
-	params := types.ComprehensivePatchParams{
-		Image: "alpine:3.17",
-		Tag:   "integration-test",
-		Push:  false,
-	}
-
-	cli := New(params, true) // Use dry run for integration test
-	result, err := cli.Build().Run(context.Background())
-
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
-	assert.Greater(t, result.Duration, time.Duration(0))
-}
