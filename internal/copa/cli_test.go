@@ -3,7 +3,6 @@ package copa
 import (
 	"context"
 	"os"
-	"os/exec"
 	"testing"
 	"time"
 
