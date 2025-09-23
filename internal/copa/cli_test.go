@@ -355,8 +355,9 @@ func TestExecutionResult(t *testing.T) {
 
 // Test error scenarios
 func (suite *CLITestSuite) TestExecute_CommandFailure() {
-	// Use a command that will fail
-	suite.cli.copaPath = "nonexistent-command"
+	// Use 'false' command which exists on all Unix systems and always fails with exit code 1
+	// This doesn't depend on copa being installed but tests command failure scenarios
+	suite.cli.copaPath = "false"
 	suite.cli.Build()
 
 	ctx := context.Background()
@@ -367,6 +368,7 @@ func (suite *CLITestSuite) TestExecute_CommandFailure() {
 	suite.NotNil(result)
 	suite.Contains(err.Error(), "command execution failed")
 	suite.Greater(result.Duration, time.Duration(0))
+	suite.Equal(1, result.ExitCode) // false command always exits with code 1
 }
 
 // Benchmark tests
@@ -507,6 +509,8 @@ func TestNew_AllParameterTypes(t *testing.T) {
 
 // Test context cancellation
 func (suite *CLITestSuite) TestExecute_ContextCancellation() {
+	// Use 'sleep' command to test context cancellation without depending on copa
+	suite.cli.copaPath = "sleep"
 	suite.cli.Build()
 
 	// Create a context that's already cancelled
