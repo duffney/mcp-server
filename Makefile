@@ -17,11 +17,11 @@ build: build-server build-client ## Build both server and client
 
 build-server: ## Build the MCP server
 	@echo "Building copacetic-mcp-server..."
-	@go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server .
+	@go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server ./cmd/copa-mcp-server
 
 build-client: ## Build the test client
 	@echo "Building copacetic-mcp-client..."
-	@go build -o bin/copacetic-mcp-client ./cmd/client
+	@go build -o bin/copacetic-mcp-client ./cmd/copa-mcp-client
 
 clean: ## Clean build artifacts
 	@echo "Cleaning..."
@@ -53,11 +53,11 @@ release-snapshot: ## Create a snapshot release with GoReleaser
 
 cross-compile: ## Cross-compile for all platforms
 	@echo "Cross-compiling for all platforms..."
-	@GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-linux-amd64 .
-	@GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-linux-arm64 .
-	@GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-darwin-amd64 .
-	@GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-darwin-arm64 .
-	@GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-windows-amd64.exe .
+	@GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-linux-amd64 ./cmd/copa-mcp-server
+	@GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-linux-arm64 ./cmd/copa-mcp-server
+	@GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-darwin-amd64 ./cmd/copa-mcp-server
+	@GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-darwin-arm64 ./cmd/copa-mcp-server
+	@GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/copacetic-mcp-server-windows-amd64.exe ./cmd/copa-mcp-server
 
 help: ## Show this help message
 	@echo "Available targets:"

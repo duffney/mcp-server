@@ -12,7 +12,7 @@ before:
 
 builds:
   - id: "copacetic-mcp-server"
-    main: ./main.go
+    main: ./cmd/copa-mcp-server/main.go
     binary: copacetic-mcp-server
     env:
       - CGO_ENABLED=0
@@ -34,7 +34,7 @@ builds:
         goarch: arm64
 
   - id: "copacetic-mcp-client"
-    main: ./cmd/client/main.go
+    main: ./cmd/copa-mcp-client/main.go
     binary: copacetic-mcp-client
     env:
       - CGO_ENABLED=0

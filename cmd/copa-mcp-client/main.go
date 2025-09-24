@@ -81,7 +81,7 @@ func initMCPClient() error {
 		return fmt.Errorf("could not find copacetic-mcp-server binary in any of: %v", serverPaths)
 	}
 
-	cmd := exec.Command(serverPath)
+	cmd := exec.Command(serverPath, "stdio")
 	// Capture server's stderr for logging
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {

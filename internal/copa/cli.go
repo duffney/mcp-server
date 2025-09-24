@@ -231,7 +231,7 @@ func (c *CLI) execute(ctx context.Context) (*ExecutionResult, error) {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitError.ExitCode()
 		}
-		return result, err
+		return result, fmt.Errorf("command execution failed: %w", err)
 	}
 
 	return result, nil
