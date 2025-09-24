@@ -2,6 +2,7 @@ package copa
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -274,6 +275,108 @@ func (suite *CLITestSuite) TestRun_ValidationFails() {
 	suite.Error(err)
 	suite.Nil(result)
 	suite.Contains(err.Error(), "command validation failed")
+}
+
+func (suite *CLITestSuite) TestRun_WithMockDockerAuth_PushFlagAdded() {
+	// Create mock docker auth
+	mockAuth := new(MockDockerAuth)
+	mockAuth.On("SetupRegistryAuthFromEnv").Return(true, nil)
+
+	// Create CLI with mock docker auth
+	params := types.ComprehensivePatchParams{
+		Image: "alpine:3.17",
+		Tag:   "test-patched",
+		Push:  false, // Initially false
+	}
+	cli := NewWithDockerAuth(params, true, mockAuth) // Use dry run to avoid actual execution
+
+	// Build the command first
+	cli.Build()
+
+	// Verify --push is not initially in the command
+	suite.NotContains(cli.cmd.Args, "--push")
+
+	ctx := context.Background()
+	result, err := cli.Run(ctx) // Use the cli instance with mock, not suite.cli
+
+	// Verify the mock was called
+	mockAuth.AssertExpectations(suite.T())
+
+	// Should succeed since it's a dry run
+	suite.NoError(err)
+	suite.NotNil(result)
+
+	// Verify that push was set to true
+	suite.True(cli.push)
+
+	// Verify --push flag was added to command arguments
+	suite.Contains(cli.cmd.Args, "--push")
+}
+
+func (suite *CLITestSuite) TestRun_WithMockDockerAuth_NoPushWhenAuthFalse() {
+	// Create mock docker auth that returns false
+	mockAuth := new(MockDockerAuth)
+	mockAuth.On("SetupRegistryAuthFromEnv").Return(false, nil)
+
+	// Create CLI with mock docker auth
+	params := types.ComprehensivePatchParams{
+		Image: "alpine:3.17",
+		Tag:   "test-patched",
+		Push:  false,
+	}
+	cli := NewWithDockerAuth(params, true, mockAuth) // Use dry run
+
+	// Build the command first
+	cli.Build()
+
+	// Verify --push is not initially in the command
+	suite.NotContains(cli.cmd.Args, "--push")
+
+	ctx := context.Background()
+	result, err := cli.Run(ctx) // Use the cli instance with mock
+
+	// Verify the mock was called
+	mockAuth.AssertExpectations(suite.T())
+
+	// Should succeed since it's a dry run
+	suite.NoError(err)
+	suite.NotNil(result)
+
+	// Verify that push remains false
+	suite.False(cli.push)
+
+	// Verify --push flag was NOT added to command arguments
+	suite.NotContains(cli.cmd.Args, "--push")
+}
+
+func (suite *CLITestSuite) TestRun_WithMockDockerAuth_AuthError() {
+	// Create mock docker auth that returns an error
+	mockAuth := new(MockDockerAuth)
+	expectedError := fmt.Errorf("authentication failed")
+	mockAuth.On("SetupRegistryAuthFromEnv").Return(false, expectedError)
+
+	// Create CLI with mock docker auth
+	params := types.ComprehensivePatchParams{
+		Image: "alpine:3.17",
+		Tag:   "test-patched",
+		Push:  false,
+	}
+	cli := NewWithDockerAuth(params, false, mockAuth)
+
+	// Build the command first
+	cli.Build()
+
+	ctx := context.Background()
+	result, err := cli.Run(ctx) // Use the cli instance with mock
+
+	// Verify the mock was called
+	mockAuth.AssertExpectations(suite.T())
+
+	// Should fail due to auth error
+	suite.Error(err)
+	suite.Nil(result)
+	suite.Contains(err.Error(), "authentication setup failed")
+	suite.Contains(err.Error(), "authentication failed")
 }
 
 // Test platform support functions

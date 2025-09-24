@@ -6,10 +6,11 @@ A Model Context Protocol (MCP) server for automated container patching using [Co
 
 This server provides the following Model Context Protocol (MCP) tools:
 
-- **`workflow-guide`**: Get patching strategy guide on which Copacetic tools to use for different container patching scenarios
+- **`version`**: Get the version of the Copa CLI tool
+- **`workflow-guide`**: Get guidance on which Copacetic tools to use for different container patching scenarios
 - **`scan-container`**: Scan container images for vulnerabilities using Trivy - creates vulnerability reports required for report-based patching
-- **`patch-vulnerabilities`**: Patch container image vulnerabilities using a pre-generated vulnerability report from 'scan-container' tool (RECOMMENDED approach for vulnerability-based patching)
-- **`patch-platforms`**: Patch specific container image platforms with Copa - patches only the specified platforms WITHOUT vulnerability scanning
+- **`patch-report-based`**: Patch container image vulnerabilities using a pre-generated vulnerability report from 'scan-container' tool (RECOMMENDED approach for vulnerability-based patching)
+- **`patch-platform-selective`**: Patch specific container image platforms with Copa - patches only the specified platforms WITHOUT vulnerability scanning
 - **`patch-comprehensive`**: Comprehensively patch all container image platforms with Copa - patches all available platforms WITHOUT vulnerability scanning
 
 ## Installation
@@ -32,7 +33,7 @@ To use copacetic-mcp with VSCode and MCP-compatible tools, add the following con
 
 Replace `/path/to/copacetic-mcp-server` with the actual path to your copacetic-mcp server binary. You can download the latest release from the [Releases]() page.
 
-> **Note**: When using the binary directly, ensure that the Copacetic CLI, Trivy, and Docker are installed and available in your system PATH.
+> **Note**: When using the binary directly, ensure that the Copacetic CLI, Trivy, and Docker with emulation are installed on your system.
 
 ### Docker Container option
 
@@ -78,42 +79,6 @@ You can also configure copacetic-mcp for use with Claude Desktop by adding it to
     }
   }
 }
-```
-
-## Development
-
-### Prerequisites
-
-- Go 1.20 or later
-- [Copacetic](https://github.com/project-copacetic/copacetic) CLI installed
-- [Trivy](https://github.com/aquasecurity/trivy) installed
-- Docker with virtualization emulation support (required for container operations)
-
-#### Copacetic CLI Requirements
-
-Copacetic requires the following to be installed and available:
-
-- **Docker**: Container runtime for image operations
-- **Buildkit**: Advanced build features (included with recent Docker versions)
-- **Container Registry Access**: For pulling and pushing patched images
-
-### Project Structure
-
-```
-copacetic-mcp/
-├── main.go                     # Main MCP server entry point
-├── cmd/client/main.go         # Test client
-├── internal/
-│   ├── mcp/                   # MCP server handlers and setup
-│   ├── copa/                  # Copacetic command execution
-│   ├── trivy/                 # Trivy vulnerability scanning
-│   ├── types/                 # Shared type definitions
-│   └── util/                  # Utility functions (multiplatform, etc.)
-├── .goreleaser.yml            # GoReleaser configuration
-├── .github/workflows/         # GitHub Actions workflows
-│   ├── build.yml             # Build and test on every push/PR
-│   └── release.yml           # Automated releases on tags
-└── Makefile                   # Development tasks
 ```
 
 ## License

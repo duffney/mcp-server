@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +17,18 @@ import (
 	"github.com/project-copacetic/mcp-server/internal/docker"
 	"github.com/project-copacetic/mcp-server/internal/types"
 )
+
+// DockerAuth interface for registry authentication operations
+type DockerAuth interface {
+	SetupRegistryAuthFromEnv() (bool, error)
+}
+
+// DockerAuthImpl implements DockerAuth using the real docker package
+type DockerAuthImpl struct{}
+
+func (d *DockerAuthImpl) SetupRegistryAuthFromEnv() (bool, error) {
+	return docker.SetupRegistryAuthFromEnv()
+}
 
 const (
 	defaultVexFile = "vex.json"
@@ -54,7 +67,8 @@ type CLI struct {
 	push       bool
 	reportPath string
 	vexPath    string
-	cmd        *exec.Cmd // Current command being built
+	cmd        *exec.Cmd  // Current command being built
+	dockerAuth DockerAuth // Dependency injection for docker authentication
 }
 
 type PatchParamsConstraint interface {
@@ -87,7 +101,15 @@ func New[T PatchParamsConstraint](params T, dryRun bool) *CLI {
 		platforms:  platforms,
 		push:       push,
 		reportPath: reportPath,
+		dockerAuth: &DockerAuthImpl{}, // Default to real implementation
 	}
+}
+
+// NewWithDockerAuth creates a CLI instance with custom docker auth for testing
+func NewWithDockerAuth[T PatchParamsConstraint](params T, dryRun bool, dockerAuth DockerAuth) *CLI {
+	cli := New(params, dryRun)
+	cli.dockerAuth = dockerAuth
+	return cli
 }
 
 func (c *CLI) Build() *CLI {
@@ -133,13 +155,14 @@ func (c *CLI) BuildWithReport() *CLI {
 
 func (c *CLI) setupAuth() error {
 	// Check if we need remote patching (push to registry)
-	remotePatch, err := docker.SetupRegistryAuthFromEnv()
+	remotePatch, err := c.dockerAuth.SetupRegistryAuthFromEnv()
 	if err != nil {
 		return fmt.Errorf("failed to authenticate to registry: %w", err)
 	}
 
-	if remotePatch {
+	if remotePatch && c.cmd != nil && !slices.Contains(c.cmd.Args, "--push") {
 		c.push = true
+		c.cmd.Args = append(c.cmd.Args, "--push")
 	}
 
 	return nil
@@ -208,7 +231,7 @@ func (c *CLI) execute(ctx context.Context) (*ExecutionResult, error) {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitError.ExitCode()
 		}
-		return result, fmt.Errorf("command execution failed: %w", err)
+		return result, err
 	}
 
 	return result, nil
