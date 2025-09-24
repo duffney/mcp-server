@@ -15,6 +15,7 @@ import (
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/project-copacetic/mcp-server/internal/docker"
+	"github.com/project-copacetic/mcp-server/internal/errors"
 	"github.com/project-copacetic/mcp-server/internal/types"
 )
 
@@ -145,7 +146,7 @@ func (c *CLI) setupAuth() error {
 	// Check if we need remote patching (push to registry)
 	remotePatch, err := c.dockerAuth.SetupRegistryAuthFromEnv()
 	if err != nil {
-		return fmt.Errorf("failed to authenticate to registry: %w", err)
+		return errors.NewAuthenticationError("setupAuth", c.image, err)
 	}
 
 	if remotePatch && c.cmd != nil && !slices.Contains(c.cmd.Args, "--push") {
@@ -158,18 +159,18 @@ func (c *CLI) setupAuth() error {
 
 func (c *CLI) validateCommand() error {
 	if c.cmd == nil {
-		return fmt.Errorf("no command built - call a Build method first")
+		return errors.NewValidationError("validateCommand", c.image, fmt.Errorf("no command built - call a Build method first"))
 	}
 
 	if c.image == "" {
-		return fmt.Errorf("image is required")
+		return errors.NewValidationError("validateCommand", c.image, fmt.Errorf("image is required"))
 	}
 
 	// Validate platforms if specified
 	if len(c.platforms) > 0 {
 		supportedPlatforms := FilterSupportedPlatforms(c.platforms)
 		if len(supportedPlatforms) == 0 {
-			return fmt.Errorf("no supported platforms found in: %v", c.platforms)
+			return errors.NewValidationError("validateCommand", c.image, fmt.Errorf("no supported platforms found in: %v", c.platforms))
 		}
 		if len(supportedPlatforms) != len(c.platforms) {
 			fmt.Fprintf(os.Stderr, "Warning: some platforms not supported by Copa, using: %v\n", supportedPlatforms)
@@ -179,7 +180,7 @@ func (c *CLI) validateCommand() error {
 	// Validate report path if specified
 	if c.reportPath != "" {
 		if _, err := os.Stat(c.reportPath); os.IsNotExist(err) {
-			return fmt.Errorf("report path does not exist: %s", c.reportPath)
+			return errors.NewValidationError("validateCommand", c.image, fmt.Errorf("report path does not exist: %s", c.reportPath))
 		}
 	}
 
@@ -188,7 +189,7 @@ func (c *CLI) validateCommand() error {
 
 func (c *CLI) execute(ctx context.Context) (*ExecutionResult, error) {
 	if c.cmd == nil {
-		return nil, fmt.Errorf("no command built - call a Build method first")
+		return nil, errors.NewValidationError("execute", c.image, fmt.Errorf("no command built - call a Build method first"))
 	}
 
 	startTime := time.Now()
@@ -219,7 +220,7 @@ func (c *CLI) execute(ctx context.Context) (*ExecutionResult, error) {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitError.ExitCode()
 		}
-		return result, fmt.Errorf("command execution failed: %w", err)
+		return result, errors.NewExecutionError("execute", c.image, err)
 	}
 
 	return result, nil
@@ -227,21 +228,21 @@ func (c *CLI) execute(ctx context.Context) (*ExecutionResult, error) {
 
 func (c *CLI) Run(ctx context.Context) (*ExecutionResult, error) {
 	if err := c.validateCommand(); err != nil {
-		return nil, fmt.Errorf("command validation failed: %w", err)
+		return nil, err // Already wrapped as CopaceticError
 	}
 
 	if err := c.setupAuth(); err != nil {
-		return nil, fmt.Errorf("authentication setup failed: %w", err)
+		return nil, err // Already wrapped as CopaceticError
 	}
 
 	result, err := c.execute(ctx)
 	if err != nil {
-		return result, fmt.Errorf("execution failed: %w", err)
+		return result, err // Already wrapped as CopaceticError
 	}
 
 	result.FixedVulnerabilityCount, result.UpdatedPackageCount, err = c.parseVexDoc(c.vexPath)
 	if err != nil {
-		return result, fmt.Errorf("parsing vex doc failed: %w", err)
+		return result, err // Already wrapped as CopaceticError
 	}
 
 	return result, nil
@@ -279,13 +280,13 @@ func (c *CLI) parseVexDoc(path string) (numFixedVulns, updatedPackageCount int, 
 
 	vexData, err := os.ReadFile(path)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, errors.NewSystemError("parseVexDoc", c.image, fmt.Errorf("failed to read VEX file %s: %w", path, err))
 	}
 
 	var doc vex.VEX
 
 	if err := json.Unmarshal(vexData, &doc); err != nil {
-		return 0, 0, err
+		return 0, 0, errors.NewSystemError("parseVexDoc", c.image, fmt.Errorf("failed to parse VEX document: %w", err))
 	}
 
 	for _, stmt := range doc.Statements {

@@ -278,7 +278,7 @@ func (suite *CLITestSuite) TestRun_ValidationFails() {
 
 	suite.Error(err)
 	suite.Nil(result)
-	suite.Contains(err.Error(), "command validation failed")
+	suite.Contains(err.Error(), "validateCommand failed for image alpine:3.17")
 }
 
 func (suite *CLITestSuite) TestRun_WithMockDockerAuth_PushFlagAdded() {
@@ -379,7 +379,7 @@ func (suite *CLITestSuite) TestRun_WithMockDockerAuth_AuthError() {
 	// Should fail due to auth error
 	suite.Error(err)
 	suite.Nil(result)
-	suite.Contains(err.Error(), "authentication setup failed")
+	suite.Contains(err.Error(), "setupAuth failed for image alpine:3.17")
 	suite.Contains(err.Error(), "authentication failed")
 }
 
@@ -473,7 +473,7 @@ func (suite *CLITestSuite) TestExecute_CommandFailure() {
 	// Should return an error but still provide result with details
 	suite.Error(err)
 	suite.NotNil(result)
-	suite.Contains(err.Error(), "command execution failed")
+	suite.Contains(err.Error(), "execute failed for image alpine:3.17")
 	suite.Greater(result.Duration, time.Duration(0))
 	suite.Equal(1, result.ExitCode) // false command always exits with code 1
 }

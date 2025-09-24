@@ -3,7 +3,6 @@ package copamcp
 import (
 	"context"
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 
@@ -26,7 +25,7 @@ func PatchComprehensive(ctx context.Context, req *mcp.CallToolRequest, params ty
 		Build().
 		Run(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("patching failed: %w", err)
+		return nil, nil, err
 	}
 
 	successMsg := fmt.Sprintf("successful patched: %s", params.Image)
@@ -45,7 +44,7 @@ func PatchPlatformSelective(ctx context.Context, req *mcp.CallToolRequest, param
 		BuildWithPlatforms().
 		Run(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("platform patch failed: %w", err)
+		return nil, nil, err
 	}
 
 	successMsg := fmt.Sprintf("successful patched: %s", params.Image)
@@ -62,7 +61,7 @@ func PatchReportBased(ctx context.Context, req *mcp.CallToolRequest, params type
 		BuildWithReport().
 		Run(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("patching failed: %w", err)
+		return nil, nil, err
 	}
 
 	successMsg := fmt.Sprintf("successful patched: %s\n vulnerabilities fixed: %d packages updated: %d", params.Image, result.FixedVulnerabilityCount, result.UpdatedPackageCount)
@@ -114,7 +113,7 @@ func Version(ctx context.Context, req *mcp.CallToolRequest, args map[string]inte
 	cmd := exec.Command("copa", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
 	version := string(output)
 	return &mcp.CallToolResult{
