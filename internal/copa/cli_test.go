@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/project-copacetic/mcp-server/internal/docker"
 	"github.com/project-copacetic/mcp-server/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -22,6 +23,9 @@ func (m *MockDockerAuth) SetupRegistryAuthFromEnv() (bool, error) {
 	args := m.Called()
 	return args.Bool(0), args.Error(1)
 }
+
+// Ensure MockDockerAuth implements docker.Auth interface
+var _ docker.Auth = (*MockDockerAuth)(nil)
 
 // Test Suite for CLI
 type CLITestSuite struct {

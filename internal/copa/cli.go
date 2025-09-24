@@ -18,18 +18,6 @@ import (
 	"github.com/project-copacetic/mcp-server/internal/types"
 )
 
-// DockerAuth interface for registry authentication operations
-type DockerAuth interface {
-	SetupRegistryAuthFromEnv() (bool, error)
-}
-
-// DockerAuthImpl implements DockerAuth using the real docker package
-type DockerAuthImpl struct{}
-
-func (d *DockerAuthImpl) SetupRegistryAuthFromEnv() (bool, error) {
-	return docker.SetupRegistryAuthFromEnv()
-}
-
 const (
 	defaultVexFile = "vex.json"
 )
@@ -67,8 +55,8 @@ type CLI struct {
 	push       bool
 	reportPath string
 	vexPath    string
-	cmd        *exec.Cmd  // Current command being built
-	dockerAuth DockerAuth // Dependency injection for docker authentication
+	cmd        *exec.Cmd   // Current command being built
+	dockerAuth docker.Auth // Dependency injection for docker authentication
 }
 
 type PatchParamsConstraint interface {
@@ -101,12 +89,12 @@ func New[T PatchParamsConstraint](params T, dryRun bool) *CLI {
 		platforms:  platforms,
 		push:       push,
 		reportPath: reportPath,
-		dockerAuth: &DockerAuthImpl{}, // Default to real implementation
+		dockerAuth: &docker.AuthImpl{}, // Default to real implementation
 	}
 }
 
 // NewWithDockerAuth creates a CLI instance with custom docker auth for testing
-func NewWithDockerAuth[T PatchParamsConstraint](params T, dryRun bool, dockerAuth DockerAuth) *CLI {
+func NewWithDockerAuth[T PatchParamsConstraint](params T, dryRun bool, dockerAuth docker.Auth) *CLI {
 	cli := New(params, dryRun)
 	cli.dockerAuth = dockerAuth
 	return cli

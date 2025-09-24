@@ -7,6 +7,18 @@ import (
 	"strings"
 )
 
+// Auth interface for registry authentication operations
+type Auth interface {
+	SetupRegistryAuthFromEnv() (bool, error)
+}
+
+// AuthImpl implements Auth using real docker operations
+type AuthImpl struct{}
+
+func (d *AuthImpl) SetupRegistryAuthFromEnv() (bool, error) {
+	return SetupRegistryAuthFromEnv()
+}
+
 // LoginWithToken authenticates to a registry using a token via docker login
 func LoginWithToken(registry, token string) (bool, error) {
 	if token == "" {
