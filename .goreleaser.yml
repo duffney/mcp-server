@@ -1,4 +1,4 @@
-# GoReleaser configuration for copacetic-mcp
+# GoReleaser configuration for mcp-server
 # Documentation: https://goreleaser.com
 
 version: 2
@@ -11,7 +11,7 @@ before:
     # - go generate ./...
 
 builds:
-  - id: "copacetic-mcp-server"
+  - id: "mcp-server-server"
     main: ./cmd/copa-mcp-server/main.go
     binary: copacetic-mcp-server
     env:
@@ -33,7 +33,7 @@ builds:
       - goos: windows
         goarch: arm64
 
-  - id: "copacetic-mcp-client"
+  - id: "mcp-server-client"
     main: ./cmd/copa-mcp-client/main.go
     binary: copacetic-mcp-client
     env:
@@ -94,8 +94,8 @@ changelog:
 release:
   # Repository to upload the release to
   github:
-    owner: duffney
-    name: copacetic-mcp
+    owner: project-copacetic
+    name: mcp-server
 
   # Create release draft
   draft: false
@@ -113,22 +113,22 @@ release:
     This release includes cross-platform binaries for the Copacetic MCP server and client.
 
   footer: |
-    **Full Changelog**: https://github.com/duffney/copacetic-mcp/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/project-copacetic/mcp-server/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ### Usage
 
     1. Download the appropriate binary for your platform
     2. Extract the archive
-    3. Run the MCP server: `./copacetic-mcp-server`
+    3. Run the MCP server: `.copacetic-mcp-server`
 
-    For more information, see the [README](https://github.com/duffney/copacetic-mcp/blob/main/README.md).
+    For more information, see the [README](https://github.com/project-copacetic/mcp-server/blob/main/README.md).
 
 # Docker image: build and push single-arch (linux/amd64) image to GitHub Container Registry
 # Using single arch to simplify and ensure GHCR package associates cleanly with the repo.
 dockers:
   - image_templates:
-      - "ghcr.io/duffney/copacetic-mcp:{{ .Version }}"
-      - "ghcr.io/duffney/copacetic-mcp:latest"
+      - "ghcr.io/project-copacetic/mcp-server:{{ .Version }}"
+      - "ghcr.io/project-copacetic/mcp-server:latest"
     dockerfile: Dockerfile
     use: buildx
     build_flag_templates:

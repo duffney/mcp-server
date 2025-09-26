@@ -48,7 +48,7 @@ Replace `/path/to/copacetic-mcp-server` with the actual path to your copacetic-m
     "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
     "--mount",
     "type=bind,source=${env:HOME}/.docker/config.json,target=/root/.docker/config.json",
-    "ghcr.io/duffney/copacetic-mcp:latest"
+    "ghcr.io/project-copacetic/mcp-server:latest"
   ],
   "env": {
     "DOCKER_HOST": "unix:///var/run/docker.sock"

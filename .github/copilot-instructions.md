@@ -4,20 +4,20 @@
 
 Copacetic MCP is a Go application that provides a Model Context Protocol (MCP) server for automated container image patching using Copacetic and Trivy. It exposes container patching capabilities through the MCP protocol, allowing AI agents and tools to patch container image vulnerabilities programmatically.
 
-**Main commands**: MCP tools `version` and `patch`
-**Module**: `github.com/duffney/copacetic-mcp`
+**Main commands**: MCP tools `version`, `scan-container`, `patch-comprehensive`, `patch-platforms`, `patch-vulnerabilities`, and `workflow-guide`
+**Module**: `github.com/project-copacetic/mcp-server`
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
 ## Folder Structure
 
-- `main.go`: Main MCP server entry point
-- `cmd/client/main.go`: Test client for validating MCP server functionality
-- `internal/mcp/`: MCP server setup, tool registration, and protocol handlers
+- `cmd/copa-mcp-server/main.go`: Main MCP server entry point
+- `cmd/copa-mcp-client/main.go`: CLI client for interacting with MCP server functionality
+- `internal/copamcp/`: MCP server setup, tool registration, and protocol handlers
 - `internal/copa/`: Copacetic command execution and container patching logic
 - `internal/trivy/`: Trivy vulnerability scanning integration
 - `internal/types/`: Shared type definitions and execution modes
-- `internal/util/`: Utility functions for multiplatform support
+- `internal/docker/`: Docker authentication utilities
 - `.goreleaser.yml`: GoReleaser configuration for cross-platform releases
 - `.github/workflows/`: CI/CD automation (build.yml, release.yml)
 - `Makefile`: Development tasks and build automation
@@ -25,8 +25,7 @@ Always reference these instructions first and fallback to search or bash command
 ## Libraries and Frameworks
 
 - **MCP Protocol**: `github.com/modelcontextprotocol/go-sdk/mcp` for Model Context Protocol server implementation
-- **Container Registry**: `github.com/google/go-containerregistry` for container image operations
-- **Docker Integration**: `github.com/docker/docker` for container runtime operations
+- **CLI Framework**: `github.com/spf13/cobra` for command-line interface structure
 - **VEX Support**: `github.com/openvex/go-vex` for vulnerability exchange document generation
 - **External Tools**: Copacetic (copa) for patching, Trivy for vulnerability scanning
 - **Cross-platform Builds**: GoReleaser for automated multi-platform binary releases
@@ -153,7 +152,7 @@ make release-snapshot  # Takes ~2 minutes 41 seconds. NEVER CANCEL. Set timeout 
 Start the MCP server (interactive mode):
 
 ```bash
-./bin/copacetic-mcp-server
+./bin/copacetic-mcp-server stdio
 # Server waits for MCP protocol messages on stdin/stdout
 # Use Ctrl+C to stop
 ```
@@ -187,7 +186,15 @@ Run the test client (requires server dependencies):
    make fmt vet  # Both commands must complete successfully
    ```
 
-4. **MCP server functionality validation** - Test server-client communication:
+4. **Integration tests validation** - Test all MCP tools end-to-end:
+
+   ```bash
+   make integration-test-quick  # Quick validation (~10 seconds)
+   # OR for comprehensive testing:
+   make integration-test  # Full validation (~2-5 minutes, requires copa/trivy/docker)
+   ```
+
+5. **MCP server functionality validation** - Test server-client communication:
    ```bash
    # Create test script to validate version tool:
    cat > test_mcp.go << 'EOF'
@@ -229,6 +236,43 @@ make cross-compile  # Set timeout to 240+ seconds, NEVER CANCEL
 ls -la bin/  # Should show binaries for linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows-amd64.exe
 ```
 
+### Integration Tests
+
+The project includes comprehensive integration tests under `.scripts/integration-test.sh` that use the copa-mcp-client to test all MCP tools end-to-end:
+
+**Run full integration tests** (requires copa, trivy, and docker):
+
+```bash
+make integration-test  # Takes ~2-5 minutes depending on network and image pulls
+# OR directly:
+./.scripts/integration-test.sh
+```
+
+**Run quick integration tests** (only version and list commands):
+
+```bash
+make integration-test-quick  # Takes ~10 seconds
+# OR directly:
+./.scripts/integration-test.sh --quick
+```
+
+**Integration test features:**
+
+- Tests all CLI commands: `version`, `list`, `scan-container`, `patch-comprehensive`, `patch-platforms`, `patch-vulnerabilities`
+- Validates complete vulnerability-based patching workflow (scan → patch-vulnerabilities)
+- Tests error scenarios with invalid inputs
+- Uses alpine:3.17 as test image (configurable via TEST_IMAGE environment variable)
+- Automatic cleanup of temporary scan reports
+- Colored output with detailed success/failure reporting
+
+**Prerequisites for integration tests:**
+
+- All external dependencies installed (copa, trivy, docker)
+- Built binaries in `bin/` directory (`make build` first)
+- Docker daemon running (for container operations)
+
+The integration tests provide confidence that the MCP server and client work correctly together and that all patching workflows function as expected.
+
 ## Important Build and Timing Information
 
 - **Build time**: ~40 seconds (first time with dependencies)
@@ -243,10 +287,14 @@ ls -la bin/  # Should show binaries for linux-amd64, linux-arm64, darwin-amd64, 
 
 ### MCP Server Architecture
 
-The server provides two MCP tools:
+The server provides these MCP tools:
 
 - `version`: Returns copa version information
-- `patch`: Patches container images using Copacetic
+- `scan-container`: Scans container images for vulnerabilities using Trivy
+- `patch-comprehensive`: Patches all available platforms without vulnerability scanning
+- `patch-platforms`: Patches specific platforms without vulnerability scanning
+- `patch-vulnerabilities`: Patches vulnerabilities based on scan results (requires scan-container output)
+- `workflow-guide`: Provides guidance on which tools to use for different scenarios
 
 ### Dependencies Not Available
 
@@ -269,15 +317,16 @@ Docker tests automatically skip in CI environments (`CI` or `GITHUB_ACTIONS` env
 ### Key Project Structure
 
 ```
-copacetic-mcp/
-├── main.go                     # Main MCP server entry point
-├── cmd/client/main.go         # Test client for MCP server validation
+mcp-server/
+├── cmd/
+│   ├── copa-mcp-server/main.go    # Main MCP server entry point
+│   └── copa-mcp-client/main.go    # CLI client for MCP server interaction
 ├── internal/
-│   ├── mcp/                   # MCP server handlers, tool registration, protocol implementation
+│   ├── copamcp/               # MCP server handlers, tool registration, protocol implementation
 │   ├── copa/                  # Copacetic command execution and container patching orchestration
 │   ├── trivy/                 # Trivy vulnerability scanning integration
 │   ├── types/                 # Shared type definitions, execution modes, and parameters
-│   └── util/                  # Utility functions for multiplatform and cross-platform support
+│   └── docker/                # Docker authentication utilities
 ├── .goreleaser.yml            # GoReleaser configuration for automated releases
 ├── .github/workflows/         # GitHub Actions CI/CD automation
 │   ├── build.yml             # Continuous integration: build, test, lint on every push/PR
