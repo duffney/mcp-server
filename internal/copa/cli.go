@@ -135,8 +135,6 @@ func (c *CLI) BuildWithReport() *CLI {
 
 	if c.reportPath != "" {
 		c.cmd.Args = append(c.cmd.Args, "--report", c.reportPath)
-		c.vexPath = filepath.Join(os.TempDir(), defaultVexFile)
-		c.cmd.Args = append(c.cmd.Args, "--output", c.vexPath)
 	}
 
 	return c
@@ -154,6 +152,18 @@ func (c *CLI) setupAuth() error {
 		c.cmd.Args = append(c.cmd.Args, "--push")
 	}
 
+	return nil
+}
+
+func (c *CLI) setupVexDir() error {
+	if c.reportPath != "" {
+		path, err := os.MkdirTemp(os.TempDir(), "vex-*")
+		if err != nil {
+			return err
+		}
+		c.vexPath = filepath.Join(path, defaultVexFile)
+		c.cmd.Args = append(c.cmd.Args, "--output", c.vexPath)
+	}
 	return nil
 }
 
@@ -233,6 +243,10 @@ func (c *CLI) Run(ctx context.Context) (*ExecutionResult, error) {
 
 	if err := c.setupAuth(); err != nil {
 		return nil, fmt.Errorf("authentication setup failed: %w", err)
+	}
+
+	if err := c.setupVexDir(); err != nil {
+		return nil, fmt.Errorf("creating vex temp dir failed: %w", err)
 	}
 
 	result, err := c.execute(ctx)
