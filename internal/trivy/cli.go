@@ -12,6 +12,25 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// isImageLocal checks if an image exists locally in the Docker daemon
+func isImageLocal(ctx context.Context, image string) bool {
+	// Handle edge cases
+	if strings.TrimSpace(image) == "" {
+		return false
+	}
+
+	// Use docker images command to check if image exists locally
+	cmd := exec.CommandContext(ctx, "docker", "images", "--format", "{{.Repository}}:{{.Tag}}", image)
+	output, err := cmd.Output()
+	if err != nil {
+		// If docker command fails, assume remote
+		return false
+	}
+
+	// If output is not empty, image exists locally
+	return strings.TrimSpace(string(output)) != ""
+}
+
 func Run(ctx context.Context, cc *mcp.ServerSession, image string, platform []string) (reportPath string, err error) {
 	reportPath, err = os.MkdirTemp(os.TempDir(), "reports-*")
 	if err != nil {
@@ -27,13 +46,14 @@ func Run(ctx context.Context, cc *mcp.ServerSession, image string, platform []st
 	if len(platform) == 0 {
 		trivyArgs = append(trivyArgs, "-o", filepath.Join(reportPath, "report.json"))
 		trivyArgs = append(trivyArgs, image)
-		cc.Log(ctx, &mcp.LoggingMessageParams{
-			Data:   "executing: " + strings.Join(append([]string{"trivy "}, trivyArgs...), " "),
-			Level:  "debug",
-			Logger: "copapatch",
-		})
 
 		trivyCmd := exec.Command("trivy", trivyArgs...)
+
+		cc.Log(ctx, &mcp.LoggingMessageParams{
+			Data:   fmt.Sprintf("Executing: %s %s", trivyCmd.Path, strings.Join(trivyCmd.Args[1:], " ")),
+			Level:  "info",
+			Logger: "trivy",
+		})
 		var stderrTrivy strings.Builder
 		trivyCmd.Stderr = &stderrTrivy
 
@@ -52,18 +72,23 @@ func Run(ctx context.Context, cc *mcp.ServerSession, image string, platform []st
 
 	for _, p := range platform {
 		args := trivyArgs
-		args = append(args, "--image-src", "remote")
+
+		if !isImageLocal(ctx, image) {
+			args = append(args, "--image-src", "remote")
+		}
+
 		args = append(args, "--platform", p)
 		args = append(args, "-o", filepath.Join(reportPath, strings.ReplaceAll(p, "/", "-")+".json"))
 		args = append(args, image)
 
-		cc.Log(ctx, &mcp.LoggingMessageParams{
-			Data:   "executing: " + strings.Join(append([]string{"trivy "}, args...), " "),
-			Level:  "debug",
-			Logger: "copapatch",
-		})
-
 		trivyCmd := exec.Command("trivy", args...)
+
+		// Log the command being executed using cc.Log to match copa's pattern
+		cc.Log(ctx, &mcp.LoggingMessageParams{
+			Data:   fmt.Sprintf("Executing: %s %s", trivyCmd.Path, strings.Join(trivyCmd.Args[1:], " ")),
+			Level:  "info",
+			Logger: "trivy",
+		})
 		var stderrTrivy strings.Builder
 		trivyCmd.Stderr = &stderrTrivy
 
