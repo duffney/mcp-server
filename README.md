@@ -17,15 +17,26 @@ This server provides the following Model Context Protocol (MCP) tools:
 
 ### VSCode Setup
 
-To use copacetic-mcp with VSCode and MCP-compatible tools, add the following configuration to your VSCode `settings.json`:
+To use copacetic-mcp with VSCode, add the MCP server configuration to your `mcp.json` file.
+
+You can create the configuration using one of these methods:
+
+1. **Using VS Code Commands** (Recommended):
+
+   - Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+   - Run `MCP: Open User Configuration` for user-level configuration
+   - Or run `MCP: Open Workspace Folder Configuration` for workspace-specific configuration
+
+2. **Manual Configuration**:
+   Create or edit your `mcp.json` file with the following configuration:
 
 ```json
 {
-  "mcp.servers": {
-    "copacetic-mcp": {
+  "servers": {
+    "copaceticMcp": {
+      "type": "stdio",
       "command": "/path/to/copacetic-mcp-server",
-      "args": [],
-      "env": {}
+      "args": []
     }
   }
 }
@@ -37,21 +48,28 @@ Replace `/path/to/copacetic-mcp-server` with the actual path to your copacetic-m
 
 ### Docker Container option
 
-```jsonc
-"copacetic-mcp-docker": {
-  "command": "docker",
-  "args": [
-    "run",
-    "--rm",
-    "-i",
-    "--mount",
-    "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
-    "--mount",
-    "type=bind,source=${env:HOME}/.docker/config.json,target=/root/.docker/config.json",
-    "ghcr.io/project-copacetic/mcp-server:latest"
-  ],
-  "env": {
-    "DOCKER_HOST": "unix:///var/run/docker.sock"
+You can also run copacetic-mcp using Docker by adding this configuration to your `mcp.json`:
+
+```json
+{
+  "servers": {
+    "copaceticMcpDocker": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--mount",
+        "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+        "--mount",
+        "type=bind,source=${env:HOME}/.docker/config.json,target=/root/.docker/config.json",
+        "ghcr.io/project-copacetic/mcp-server:latest"
+      ],
+      "env": {
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
+      }
+    }
   }
 }
 ```
