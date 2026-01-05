@@ -19,16 +19,14 @@ This server provides the following Model Context Protocol (MCP) tools:
 
 To use copacetic-mcp with VSCode, add the MCP server configuration to your `mcp.json` file.
 
-You can create the configuration using one of these methods:
+**Opening the MCP Configuration File**:
 
-1. **Using VS Code Commands** (Recommended):
+1. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+2. Choose one of these commands:
+   - `MCP: Open User Configuration` - Configure for your user profile (applies to all workspaces)
+   - `MCP: Open Workspace Folder Configuration` - Configure for the current workspace only
 
-   - Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-   - Run `MCP: Open User Configuration` for user-level configuration
-   - Or run `MCP: Open Workspace Folder Configuration` for workspace-specific configuration
-
-2. **Manual Configuration**:
-   Create or edit your `mcp.json` file with the following configuration:
+This will create or open your `mcp.json` file where you can add the following configuration:
 
 ```json
 {
